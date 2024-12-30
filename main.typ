@@ -36,8 +36,8 @@
 
   v(.2fr)
   align(center, "Уровень образования: бакалавриат
-    Направление 02.03.01 «Математика и компьютерные науки»
-    Основная образовательная программа СВ.5001.2021 «Математика и компьютерные науки»")
+      Направление 02.03.01 «Математика и компьютерные науки»
+      Основная образовательная программа СВ.5001.2021 «Математика и компьютерные науки»")
 
   v(.2fr)
   align(right, "Научный руководитель: \n профессор кафедры вычислительной математики, \n д.ф.-м.н. Б. И. Герасимовна")
@@ -221,23 +221,26 @@ $
 Возьмем натуральное $n$ и по нему построим $h = 1 slash (n+1)$, тогда в координатной системе ${phi_(i,h)}$ первая и
 последняя функции выглядят следующим образом:
 
-#cetz.canvas(
-  {
-    import cetz.draw: *
+#align(
+  center,
+  cetz.canvas(
+    {
+      import cetz.draw: *
 
-    let wf = x => calc.max(1 - calc.abs(x - 1), 0)
-    let n = 10
-    let h = 1 / (n + 1)
+      let wf = x => calc.max(1 - calc.abs(x - 1), 0)
+      let n = 10
+      let h = 1 / (n + 1)
 
-    let phi_first = x => wf(x / h + 1)
-    let phi_last = x => wf(x / h - n)
+      let phi_first = x => wf(x / h + 1)
+      let phi_last = x => wf(x / h - n)
 
-    plot.plot(size: (12, 8), x-tick-step: 0.25, y-tick-step: 0.5, y-min: -0.25, y-max: 1.75, legend: "inner-north", {
-      let domain = (-0.25, 1.25)
-      plot.add(phi_first, domain: domain, samples: 1000, label: [$phi_(-1,h)$])
-      plot.add(phi_last, domain: domain, samples: 1000, label: [$phi_(n,h)$])
-    })
-  },
+      plot.plot(size: (12, 8), x-tick-step: 0.25, y-tick-step: 0.5, y-min: -0.25, y-max: 1.75, legend: "inner-north", {
+        let domain = (-0.25, 1.25)
+        plot.add(phi_first, domain: domain, samples: 1000, label: [$phi_(-1,h)$])
+        plot.add(phi_last, domain: domain, samples: 1000, label: [$phi_(n,h)$])
+      })
+    },
+  ),
 )
 Будем строить аппроксимирующую функцию вида $u_h = sum_(k=-1)^n a_k phi_(k,h)$, заметим, что так как $u(1) = 0$, то
 коэффициент при последнем члене $a_n = 0$.
