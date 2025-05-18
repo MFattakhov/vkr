@@ -2,20 +2,21 @@
 import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
-from analytic_approach_0_level import make_u
+from analytic_approach_finance import make_u
 
 # %%
 # Parameters
-alpha = 1.8
-h = sp.S(1)/4
+alpha = 1
+h = sp.S(1) / 100
 n = int(round(1 / h - 1))
 # %%
 # Symbolic variables
 x, y, a = sp.symbols("x y a", real=True, positive=True)
 # %%
 # uexact
-uexact_expr = (x**(3-alpha)-1)/(3-alpha)
-uexact_func = sp.lambdify(x, uexact_expr, "numpy")
+# uexact_expr = (x ** (3 - alpha) - 1) / (3 - alpha)
+# uexact_expr = (1 - x) ** 3
+# uexact_func = sp.lambdify(x, uexact_expr, "numpy")
 
 
 # %%
@@ -40,6 +41,7 @@ def w(y):
     # Return scalar if input was scalar
     return result[0] if np.isscalar(y.shape) and y.shape == () else result
 
+
 # Create function factories for shifted versions
 def make_phi(j):
     """Create a shifted w0 function for specific j value"""
@@ -50,10 +52,11 @@ def make_phi(j):
         return w(y)
 
     return phi
+
+
 # %%
 phiCompiled = [make_phi(j) for j in range(-1, n)]
 # %%
-
 
 
 A = np.array(make_u(h, alpha))
@@ -76,12 +79,47 @@ def u_approx(x):
 x_vals = np.linspace(0, 1, 100)
 u_approx_vec = np.vectorize(u_approx)
 plt.plot(x_vals, u_approx_vec(x_vals), label="Approximate solution $u_{approx}(x)$")
-plt.plot(
-    x_vals, uexact_func(x_vals), label="Exact solution $u_{exact}(x)$", linestyle="--"
-)
+# plt.plot(
+#     x_vals, uexact_func(x_vals), label="Exact solution $u_{exact}(x)$", linestyle="--"
+# )
 plt.xlabel("x")
 plt.ylabel("u(x)")
 plt.title("Approximate vs Exact Solution")
 plt.legend()
 plt.show()
+# %%
+x_vals = np.linspace(0, 1, 100)
+u_approx_vec = np.vectorize(u_approx)
+
+# %%
+plt.plot(x_vals, u_approx_vec(x_vals), label="Approximate solution $u_{approx}(x)$")
+# plt.plot(
+#     x_vals, uexact_func(x_vals), label="Exact solution $u_{exact}(x)$", linestyle="--"
+# )
+# plt.plot(
+#     x_vals,
+#     uexact_prime(x_vals, alpha),
+#     label="Exact solution derivative $u_{exact}'(x)$",
+#     linestyle="--",
+# )
+plt.scatter(
+    [float(h * j) for j in range(len(A))],
+    [float(y) for y in A],
+    alpha=0.2,
+)
+# plt.scatter(
+#     [float(h * j) for j in range(len(A0))],
+#     A1,
+#     alpha=0.1,
+# )
+plt.xlabel("x")
+plt.ylabel("u(x)")
+plt.title("Approximate vs Exact Solution")
+plt.legend()
+plt.show()
+
+# %%
+# %%
+# for x in np.linspace(0, 0.9, 11):
+#     print(f"{x:.1f}", f"{np.abs(u_approx(x) - uexact_func(x)):.2e}")
 # %%

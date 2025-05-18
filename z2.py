@@ -5,8 +5,13 @@ import sympy as sp
 from joblib import Parallel, delayed
 from scipy.integrate import quad
 
-from num_approach_fuck import get_M_for_u_numeric, get_M_for_u_prime_numeric
+from analytic_v2 import get_M_for_u, get_M_for_u_prime
 
+# %%
+# Parameters
+alpha = 1.5
+h = sp.S(1) / 8
+n = int(round(1 / h - 1))
 # %%
 # Symbolic variables
 x, y, a = sp.symbols("x y a", real=True, positive=True)
@@ -52,14 +57,6 @@ def w1(y):
 
     # Return scalar if input was scalar
     return result[0] if np.isscalar(y.shape) and y.shape == () else result
-
-
-# %%
-# Parameters
-alpha = 1.8
-h = sp.S(1) / 6
-n = int(round(1 / h - 1))
-# %%
 
 
 # Derivatives of w0 and w1
@@ -140,13 +137,13 @@ def make_phi1prime(j):
 
 
 # %%
-phi0Compiled = [make_phi0(j) for j in range(0, n)]
-phi1Compiled = [make_phi1(j) for j in range(0, n)]
+phi0Compiled = [make_phi0(j) for j in range(-1, n)]
+phi1Compiled = [make_phi1(j) for j in range(-1, n)]
 # %%
-phi0D = [make_phi0prime(j) for j in range(0, n)]
-phi1D = [make_phi1prime(j) for j in range(0, n)]
+phi0D = [make_phi0prime(j) for j in range(-1, n)]
+phi1D = [make_phi1prime(j) for j in range(-1, n)]
 # %%
-size = n
+size = n + 1
 
 
 # %%
@@ -207,7 +204,7 @@ def make_f_and_uexact_4():
 
 
 # %%
-uexact_expr, uexact_func, fc_expr, fc_func = make_f_and_uexact_4()
+uexact_expr, uexact_func, fc_expr, fc_func = make_f_and_uexact_1()
 uexact_prime = sp.lambdify((x, a), sp.diff(uexact_expr, x), "numpy")
 fc_expr_1 = x**alpha * sp.diff(fc_expr, x)
 fc_func_1 = sp.lambdify((x, a), fc_expr_1, "numpy")
@@ -216,19 +213,19 @@ fc_func_1 = sp.lambdify((x, a), fc_expr_1, "numpy")
 # %%
 # Integrands
 def integrand0(x_val, j, currentAlpha):
-    return fc_func(x_val, currentAlpha) * phi0Compiled[j](
+    return fc_func(x_val, currentAlpha) * phi0Compiled[j + 1](
         x_val
     )  # j+1 because Python index starts at 0
 
 
 def integrand1(x_val, j, currentAlpha):
-    return fc_func_1(x_val, currentAlpha) * phi0Compiled[j](x_val)
+    return fc_func_1(x_val, currentAlpha) * phi0Compiled[j + 1](x_val)
 
 
 # %%
 # Integration limits
 def limits_diag(j):
-    return h * j, h * (j + 2)
+    return max(0, h * j), h * (j + 2)
 
 
 # %%
@@ -236,7 +233,7 @@ def limits_diag(j):
 def integrate_f0j(j):
     a_, b_ = limits_diag(j)
     result, _ = quad(
-        integrand0, a_, b_, args=(j, alpha), epsabs=1e-8, epsrel=1e-8, limit=100
+        integrand0, a_, b_, args=(j, alpha), epsabs=1e-16, epsrel=1e-16, limit=1000
     )
     return result
 
@@ -244,21 +241,18 @@ def integrate_f0j(j):
 def integrate_f1j(j):
     a_, b_ = limits_diag(j)
     result, _ = quad(
-        integrand1, a_, b_, args=(j, alpha), epsabs=1e-8, epsrel=1e-8, limit=100
+        integrand1, a_, b_, args=(j, alpha), epsabs=1e-16, epsrel=1e-16, limit=1000
     )
     return result
 
 
 # %%
-f0j = Parallel(n_jobs=-1)(delayed(integrate_f0j)(j) for j in range(0, n))
-f1j = Parallel(n_jobs=-1)(delayed(integrate_f1j)(j) for j in range(0, n))
+f0j = Parallel(n_jobs=-1)(delayed(integrate_f0j)(j) for j in range(-1, n))
+f1j = Parallel(n_jobs=-1)(delayed(integrate_f1j)(j) for j in range(-1, n))
 # %%
-m0 = get_M_for_u_numeric(h, alpha)
-m1 = get_M_for_u_prime_numeric(h, alpha)
-
+m0 = get_M_for_u(h, alpha)
 # %%
-m0 = m0[1:, 1:]
-m1 = m1[1:, 1:]
+m1 = get_M_for_u_prime(h, alpha)
 
 
 # %%
@@ -301,11 +295,7 @@ x_vals = np.linspace(0, 1, 100)
 u_approx_vec = np.vectorize(u_approx)
 plt.plot(x_vals, u_approx_vec(x_vals), label="Approximate solution $u_{approx}(x)$")
 u_approx_prime_vec = np.vectorize(u_approx_prime)
-plt.plot(
-    x_vals,
-    u_approx_prime_vec(x_vals),
-    label="Approximate prime of solution $u_{approx}(x)$",
-)
+plt.plot(x_vals, u_approx_prime_vec(x_vals), label="Approximate prime of solution $u_{approx}(x)$")
 plt.plot(
     x_vals,
     uexact_func(x_vals, alpha),
@@ -319,12 +309,12 @@ plt.plot(
     linestyle="--",
 )
 plt.scatter(
-    [float(h * (j + 1)) for j in range(len(A0))],
+    [float(h * j) for j in range(len(A0))],
     A0,
     alpha=0.2,
 )
 plt.scatter(
-    [float(h * (j + 1)) for j in range(len(A0))],
+    [float(h * j) for j in range(len(A0))],
     A1,
     alpha=0.1,
 )
@@ -341,141 +331,21 @@ plt.plot(
 )
 plt.show()
 
-# # %%
-# for x in np.linspace(0.1, 0.9, 9):
-#     print(f"{x:.1f}", f"{np.abs(u_approx(x) - uexact_func(x, alpha)):.2e}")
-# # %%
-# print(f'({', '.join(f"({v}, {u_approx(v)})" for v in np.linspace(0, 1, 100))})')
-# # %%
-# print(
-#     f'({', '.join(f"({v}, {np.abs(u_approx(v) - uexact_func(v, alpha))})" for v in np.linspace(0, 1, 100))})'
-# )
-
-# # %%
-# print(
-#     f'({', '.join(f"({v}, {u_approx_prime_vec(v)})" for v in np.linspace(0, 1, 100))})'
-# )
-# # %%
-# print(
-#     f'({', '.join(f"({v}, {np.abs(u_approx_prime_vec(v) - uexact_prime(v, alpha))})" for v in np.linspace(0, 1, 100))})'
-# )
+# %%
+for x in np.linspace(0, 0.9, 10):
+    print(f"{x:.1f}", f"{np.abs(u_approx(x) - uexact_func(x, alpha)):.2e}")
+# %%
+print(f'({', '.join(f"({v}, {u_approx(v)})" for v in np.linspace(0, 1, 100))})')
+# %%
+print(
+    f'({', '.join(f"({v}, {np.abs(u_approx(v) - uexact_func(v, alpha))})" for v in np.linspace(0, 1, 100))})'
+)
 
 # %%
-# Build full approximate vector including boundaries:
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
+print(f'({', '.join(f"({v}, {u_approx_prime_vec(v)})" for v in np.linspace(0, 1, 100))})')
+# %%
+print(
+    f'({', '.join(f"({v}, {np.abs(u_approx_prime_vec(v) - uexact_prime(v, alpha))})" for v in np.linspace(0, 1, 100))})'
+)
 
-n = int(round(1 / h - 1)) + 1
-x_nodes = np.linspace(0, 1, n + 1)
-u_approx = np.empty(n + 1)
-u_approx[1:-1] = np.array(A0)
-u_approx[0] = uexact_func(0, alpha)  # or your computed u(0)
-u_approx[-1] = uexact_func(1, alpha)  # = 0 in your problem
-
-
-# --- Method 1: Cubic Hermite Interpolation (slope averaging) ---
-def make_hermite(x_nodes, u_nodes, h):
-    N = len(u_nodes) - 1
-    # compute nodal slopes by centered differences
-    d = np.zeros_like(u_nodes)
-    d[1:N] = (u_nodes[2:] - u_nodes[:-2]) / (2 * h)
-    d[0] = (u_nodes[1] - u_nodes[0]) / h
-    d[N] = (u_nodes[N] - u_nodes[N - 1]) / h
-
-    def H(x_eval):
-        x_eval = np.atleast_1d(x_eval)
-        y = np.zeros_like(x_eval)
-        yprime = np.zeros_like(x_eval)
-        for j, xv in enumerate(x_eval):
-            # locate interval
-            if xv <= x_nodes[0]:
-                i, t = 0, 0
-            elif xv >= x_nodes[-1]:
-                i, t = N - 1, 1
-            else:
-                i = int((xv - x_nodes[0]) // h)
-                t = (xv - x_nodes[i]) / h
-            u0, u1 = u_nodes[i], u_nodes[i + 1]
-            d0, d1 = d[i], d[i + 1]
-            # Hermite basis
-            h00 = 2 * t**3 - 3 * t**2 + 1
-            h10 = t**3 - 2 * t**2 + t
-            h01 = -2 * t**3 + 3 * t**2
-            h11 = t**3 - t**2
-            y[j] = h00 * u0 + h10 * h * d0 + h01 * u1 + h11 * h * d1
-            # derivatives of basis
-            dh00 = 6 * t**2 - 6 * t
-            dh10 = 3 * t**2 - 4 * t + 1
-            dh01 = -6 * t**2 + 6 * t
-            dh11 = 3 * t**2 - 2 * t
-            yprime[j] = (dh00 * u0 + dh10 * h * d0 + dh01 * u1 + dh11 * h * d1) / h
-        return y, yprime
-
-    return H
-
-
-H_func = make_hermite(x_nodes, u_approx, h)
-
-# --- Method 2: Natural Cubic Spline (C²) ---
-cs = CubicSpline(x_nodes, u_approx, bc_type="natural")
-
-# Evaluate on fine grid
-xf = np.linspace(0, 1, 500)
-uh_H, up_H = H_func(xf)
-uh_CS = cs(xf)
-up_CS = cs(xf, 1)
-ue = uexact_func(xf,alpha)
-upe = uexact_prime(xf,alpha)
-
-def linear_interp(x_nodes, u_nodes, x_eval):
-    return np.interp(x_eval, x_nodes, u_nodes)
-
-# Precompute slopes (forward difference)
-slopes = np.diff(u_approx) / h
-
-def linear_derivative(x_nodes, slopes, x_eval):
-    x_eval = np.atleast_1d(x_eval)
-    d = np.zeros_like(x_eval)
-    N = len(slopes)
-    for j, xv in enumerate(x_eval):
-        if xv <= x_nodes[0]:
-            i = 0
-        elif xv >= x_nodes[-1]:
-            i = N - 1
-        else:
-            i = int((xv - x_nodes[0]) // h)
-        d[j] = slopes[i]
-    return d
-
-uh_lin = linear_interp(x_nodes, u_approx, xf)
-up_lin = linear_derivative(x_nodes, slopes, xf)
-
-
-# Plot
-plt.figure(figsize=(12, 6))
-
-plt.subplot(1, 2, 1)
-plt.plot(xf, ue, label='Exact')
-plt.plot(xf, uh_lin, label='Linear C⁰')
-plt.plot(xf, uh_H, '--', label='Hermite C¹')
-plt.plot(xf, uh_CS, '-.', label='Cubic Spline C²')
-plt.plot(x_nodes, u_approx, 'ko', markersize=3, label='Nodes')
-plt.title('Solution Approximation')
-plt.xlabel('x')
-plt.ylabel('u(x)')
-plt.legend()
-
-plt.subplot(1, 2, 2)
-plt.plot(xf, upe, label="Exact $u'$")
-plt.plot(xf, up_lin, label="Linear $u'$")
-plt.plot(xf, up_H, '--', label="Hermite C¹ $u'$")
-plt.plot(xf, up_CS, '-.', label="Cubic Spline C² $u'$")
-plt.title('Derivative Approximation')
-plt.xlabel('x')
-plt.ylabel("u'(x)")
-plt.legend()
-
-plt.tight_layout()
-plt.show()
 # %%

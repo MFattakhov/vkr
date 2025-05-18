@@ -5,13 +5,9 @@ import sympy as sp
 from joblib import Parallel, delayed
 from scipy.integrate import quad
 
-from analytic_approach_fuck import get_M_for_u, get_M_for_u_prime
+from num_approach_fuck import get_M_for_u_numeric, get_M_for_u_prime_numeric
+from analytic_approach_0_level import make_u, make_f0
 
-# %%
-# Parameters
-alpha = 1
-h = sp.S(1) / 8
-n = int(round(1 / h - 1))
 # %%
 # Symbolic variables
 x, y, a = sp.symbols("x y a", real=True, positive=True)
@@ -59,6 +55,14 @@ def w1(y):
     return result[0] if np.isscalar(y.shape) and y.shape == () else result
 
 
+# %%
+# Parameters
+alpha = 1
+h = sp.S(1) / 8
+n = int(round(1 / h - 1))
+# %%
+
+
 # Create function factories for shifted versions
 def make_phi0(j):
     """Create a shifted w0 function for specific j value"""
@@ -83,10 +87,10 @@ def make_phi1(j):
 
 
 # %%
-phi0Compiled = [make_phi0(j) for j in range(0, n)]
-phi1Compiled = [make_phi1(j) for j in range(0, n)]
+phi0Compiled = [make_phi0(j) for j in range(-1, n)]
+phi1Compiled = [make_phi1(j) for j in range(-1, n)]
 # %%
-size = n
+size = n + 1
 
 
 # %%
@@ -99,7 +103,7 @@ def make_f_and_uexact_1():
     fc_expr = 3 * (x - 1) * x ** (alpha - 1) * ((alpha + 2) * x - alpha) - (x - 1) ** 3
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_func, fc_func
+    return uexact_expr, uexact_func, fc_expr, fc_func
 
 
 def make_f_and_uexact_2():
@@ -114,7 +118,7 @@ def make_f_and_uexact_2():
     ) / (x * (-3 + alpha))
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_func, fc_func
+    return uexact_expr, uexact_func, fc_expr, fc_func
 
 
 def make_f_and_uexact_3():
@@ -129,7 +133,7 @@ def make_f_and_uexact_3():
     ) / (x * (-3 + alpha))
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_func, fc_func
+    return uexact_expr, uexact_func, fc_expr, fc_func
 
 
 def make_f_and_uexact_4():
@@ -143,14 +147,12 @@ def make_f_and_uexact_4():
     )
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_func, fc_func
+    return uexact_expr, uexact_func, fc_expr, fc_func
 
 
 # %%
-uexact_func, fc_func = make_f_and_uexact_4()
-fc_expr = (-1 + x) ** 2 * x ** (3 - alpha) + 2 * x * (
-    -3 + 2 * x**2 * (-5 + alpha) - 3 * x * (-4 + alpha) + alpha
-)
+uexact_expr, uexact_func, fc_expr, fc_func = make_f_and_uexact_1()
+uexact_prime = sp.lambdify((x, a), sp.diff(uexact_expr, x), "numpy")
 fc_expr_1 = x**alpha * sp.diff(fc_expr, x)
 fc_func_1 = sp.lambdify((x, a), fc_expr_1, "numpy")
 
@@ -170,7 +172,7 @@ def integrand1(x_val, j, currentAlpha):
 # %%
 # Integration limits
 def limits_diag(j):
-    return h * j, h * (j + 2)
+    return max(0, h * j), h * (j + 2)
 
 
 # %%
@@ -192,15 +194,11 @@ def integrate_f1j(j):
 
 
 # %%
-f0j = Parallel(n_jobs=-1)(delayed(integrate_f0j)(j) for j in range(0, n))
-f1j = Parallel(n_jobs=-1)(delayed(integrate_f1j)(j) for j in range(0, n))
+f0j = Parallel(n_jobs=-1)(delayed(integrate_f0j)(j) for j in range(-1, n))
+f1j = Parallel(n_jobs=-1)(delayed(integrate_f1j)(j) for j in range(-1, n))
 # %%
-m0 = get_M_for_u(h, alpha)
-m1 = get_M_for_u_prime(h, alpha)
-
-# %%
-m0 = m0[1:, 1:]
-m1 = m1[1:, 1:]
+m0 = get_M_for_u_numeric(h, alpha)
+m1 = get_M_for_u_prime_numeric(h, alpha)
 
 
 # %%
@@ -214,7 +212,7 @@ def solve_system(M, f_vec):
     return [sol[u[i]] for i in range(M.shape[0])]
 
 
-A0 = solve_system(m0, f0j)
+A0 = solve_system(m0, make_f0(h, alpha))
 A1 = solve_system(m1, f1j)
 
 
@@ -238,25 +236,6 @@ plt.plot(
     label="Exact solution $u_{exact}(x)$",
     linestyle="--",
 )
-plt.xlabel("x")
-plt.ylabel("u(x)")
-plt.title("Approximate vs Exact Solution")
-plt.legend()
-plt.show()
-
-# %%
-# %%
-x_vals = np.linspace(0, 1, 100)
-u_approx_vec = np.vectorize(u_approx)
-uexact_expr = x ** (3 - alpha) * (1 - x) ** 2
-uexact_prime = sp.lambdify((x, a), sp.diff(uexact_expr, x), "numpy")
-plt.plot(x_vals, u_approx_vec(x_vals), label="Approximate solution $u_{approx}(x)$")
-plt.plot(
-    x_vals,
-    uexact_func(x_vals, alpha),
-    label="Exact solution $u_{exact}(x)$",
-    linestyle="--",
-)
 plt.plot(
     x_vals,
     uexact_prime(x_vals, alpha),
@@ -264,12 +243,12 @@ plt.plot(
     linestyle="--",
 )
 plt.scatter(
-    [float(h * (j+1)) for j in range(len(A0))],
+    [float(h * j) for j in range(len(A0))],
     A0,
     alpha=0.2,
 )
 plt.scatter(
-    [float(h * (j+1)) for j in range(len(A0))],
+    [float(h * j) for j in range(len(A0))],
     A1,
     alpha=0.1,
 )

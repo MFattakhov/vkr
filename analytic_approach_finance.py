@@ -1,12 +1,13 @@
 # %%
 import sympy as sp
-import numpy as np
-import matplotlib.pyplot as plt
 
 # %%
 # Define symbolic variables
-x, h, y, alpha = sp.symbols("x h y alpha", real=True, positive=True)
+x, h, y = sp.symbols("x h y", real=True, positive=True)
 j = sp.symbols("j", integer=True)
+kappa = 3.0
+sigma = 0.5
+theta = 0.04
 # %%
 
 # Define basis function w0, w1
@@ -26,21 +27,23 @@ w0rh_j_p_next = sp.diff(w0rh_j_next, x)
 # %%
 # integrate
 res1 = sp.integrate(
-    x**alpha * w0lh_j_p**2 + w0lh_j**2, (x, h * j, h * (j + 1))
+    x * sigma**2 / 2 * w0lh_j_p**2 + kappa * w0lh_j**2, (x, h * j, h * (j + 1))
 ).simplify()
 res2 = sp.integrate(
-    x**alpha * w0rh_j_p**2 + w0rh_j**2, (x, h * (j + 1), h * (j + 2))
+    x * sigma**2 / 2 * w0rh_j_p**2 + kappa * w0rh_j**2, (x, h * (j + 1), h * (j + 2))
 ).simplify()
 # %%
 M_00_diag_inner = (res1 + res2).simplify()
 
 # %%
 M_00_diag_first = (
-    sp.integrate(x**alpha * w0rh_j_p**2 + w0rh_j**2, (x, 0, h)).subs({j: -1}).simplify()
+    sp.integrate(x * sigma**2 / 2 * w0rh_j_p**2 + kappa * w0rh_j**2, (x, 0, h))
+    .subs({j: -1})
+    .simplify()
 )
 # %%
 M_00_subdiag = sp.integrate(
-    x**alpha * w0rh_j_p * w0lh_j_p_next + w0rh_j * w0lh_j_next,
+    x * sigma**2 / 2 * w0rh_j_p * w0lh_j_p_next + kappa * w0rh_j * w0lh_j_next,
     (x, h * (j + 1), h * (j + 2)),
 )
 
@@ -68,9 +71,7 @@ def make_M(h_):
 
 
 # %%
-f = -((-1 + x) ** 3) + 3 * (-1 + x) * x ** (-1 + alpha) * (-alpha + x * (2 + alpha))
-f = (x ** (3 - alpha) - 2 * (3 - alpha) * x - 1) / (3 - alpha)
-f = 3 * (x - 1) * x ** (alpha - 1) * ((alpha + 2) * x - alpha) - (x - 1) ** 3
+f = kappa * theta
 
 
 # %%
@@ -86,7 +87,7 @@ def make_f0(h_, alpha_=None):
             )
         ).simplify()
     if alpha_ is not None:
-        return f0.subs({alpha: alpha_})
+        return f0
     return f0
 
 
@@ -97,9 +98,9 @@ def make_f(h_):
 
 # %%
 def make_u(h_, alpha_):
-    f_vec = make_f(h_).subs({alpha: alpha_})
+    f_vec = make_f(h_)
     print(f"{f_vec=}")
-    M = make_M(h_).subs({alpha: alpha_})
+    M = make_M(h_)
 
     u = sp.Matrix(M.shape[0], 1, lambda i, j: sp.Symbol(f"u_{i + 1}"))
     sol = sp.solve(M * u - f_vec, u)

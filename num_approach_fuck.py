@@ -137,16 +137,7 @@ def get_M_for_u_numeric(h_, alpha_):
 
     # Calculate matrix size N+1 where N = 1/h_ - 1
     # Need to handle potential floating point inaccuracies in 1/h_
-    n_float = 1.0 / h_ - 1.0
-    if np.isclose(n_float, round(n_float)):
-        n = int(round(n_float))
-    else:
-        # This case should ideally not happen if h_ is a divisor of 1, e.g. 0.2, 0.1 etc.
-        warnings.warn(
-            f"h_={h_} does not seem to be an integer fraction of 1. Resulting matrix size might be unexpected.",
-            UserWarning,
-        )
-        n = int(np.floor(n_float))  # Or ceiling, depending on interpretation
+    n = int(round(1.0 / h_ - 1.0))
 
     matrix_size = n + 1
     if matrix_size < 1:
@@ -264,15 +255,7 @@ def get_M_for_u_prime_numeric(h_, alpha_):
         raise ValueError(f"h_ must be in the range (0, 1], but got {h_}")
 
     # Calculate matrix size N+1 where N = 1/h_ - 1
-    n_float = 1.0 / h_ - 1.0
-    if np.isclose(n_float, round(n_float)):
-        n = int(round(n_float))
-    else:
-        warnings.warn(
-            f"h_={h_} does not seem to be an integer fraction of 1. Resulting matrix size might be unexpected.",
-            UserWarning,
-        )
-        n = int(np.floor(n_float))
+    n = int(round(1.0 / h_ - 1.0))
 
     matrix_size = n + 1
     if matrix_size < 1:
