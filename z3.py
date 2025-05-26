@@ -10,7 +10,7 @@ from analytic_v2 import get_M_for_u, get_M_for_u_prime
 # %%
 # Parameters
 alpha = 1.5
-h = sp.S(1) / 4
+h = sp.S(1) / 16
 n = int(round(1 / h - 1))
 # %%
 # Symbolic variables
@@ -150,19 +150,19 @@ size = n + 1
 def make_f_and_uexact_1():
     # uexact
     uexact_expr = (1 - x) ** 3
-    uexact_func = sp.lambdify((x, a), uexact_expr, "numpy")
+    uexact = sp.lambdify((x, a), uexact_expr, "numpy")
 
     # 3 (x - 1) x^(α - 1) ((α + 2) x - α) - (x - 1)^3
     fc_expr = 3 * (x - 1) * x ** (alpha - 1) * ((alpha + 2) * x - alpha) - (x - 1) ** 3
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_expr, uexact_func, fc_expr, fc_func
+    return uexact_expr, uexact, fc_expr, fc_func
 
 
 def make_f_and_uexact_2():
     # uexact
     uexact_expr = ((1 - x) ** (3 - alpha)) / (3 - alpha)
-    uexact_func = sp.lambdify((x, a), uexact_expr, "numpy")
+    uexact = sp.lambdify((x, a), uexact_expr, "numpy")
 
     # ((1 - x)^(-α) ((-1 + x)^3 x + (-1 + x) x^α (2 x - α) (-3 + α)))/(x (-3 + α))
     fc_expr = (
@@ -171,13 +171,13 @@ def make_f_and_uexact_2():
     ) / (x * (-3 + alpha))
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_expr, uexact_func, fc_expr, fc_func
+    return uexact_expr, uexact, fc_expr, fc_func
 
 
 def make_f_and_uexact_3():
     # uexact
     uexact_expr = -((1 - x) ** (3 - alpha)) / (3 - alpha)
-    uexact_func = sp.lambdify((x, a), uexact_expr, "numpy")
+    uexact = sp.lambdify((x, a), uexact_expr, "numpy")
 
     # ((1 - x)^(-α) ((-1 + x)^3 x + (-1 + x) x^α (2 x - α) (-3 + α)))/(x (-3 + α))
     fc_expr = -(
@@ -186,13 +186,13 @@ def make_f_and_uexact_3():
     ) / (x * (-3 + alpha))
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_expr, uexact_func, fc_expr, fc_func
+    return uexact_expr, uexact, fc_expr, fc_func
 
 
 def make_f_and_uexact_4():
     # uexact
     uexact_expr = x ** (3 - alpha) * (1 - x) ** 2
-    uexact_func = sp.lambdify((x, a), uexact_expr, "numpy")
+    uexact = sp.lambdify((x, a), uexact_expr, "numpy")
 
     # (-1 + x)^2 x^(3 - α) + 2 x (-3 + 2 x^2 (-5 + α) - 3 x (-4 + α) + α)
     fc_expr = (-1 + x) ** 2 * x ** (3 - alpha) + 2 * x * (
@@ -200,13 +200,13 @@ def make_f_and_uexact_4():
     )
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_expr, uexact_func, fc_expr, fc_func
+    return uexact_expr, uexact, fc_expr, fc_func
 
 
 def make_f_and_uexact_5():
     # uexact
     uexact_expr = (x + 1) ** (3 - alpha) * (1 - x) ** 2
-    uexact_func = sp.lambdify((x, a), uexact_expr, "numpy")
+    uexact = sp.lambdify((x, a), uexact_expr, "numpy")
 
     # ((1 + x)^(1 - α) (x (-1 + x^2)^2 + x^α (4 x (1 + (2 - 5 x) x) + (-1 + x)^2 (-1 + 4 x) α + (-1 + x)^2 α^2)))/x
     fc_expr = (
@@ -223,16 +223,47 @@ def make_f_and_uexact_5():
     ) / x
     fc_func = sp.lambdify((x, a), fc_expr, "numpy")
 
-    return uexact_expr, uexact_func, fc_expr, fc_func
+    return uexact_expr, uexact, fc_expr, fc_func
 
+
+def make_f_and_uexact_6():
+    # uexact
+    @np.vectorize
+    def uexact(x, a):
+        if x <= 0.5:
+            return 3 * x**2 - 2 * x
+        else:
+            return -(x**2) + 2 * x - 1
+
+    @np.vectorize
+    def uexact_prime(x, a):
+        if x <= 0.5:
+            return 6 * x - 2
+        else:
+            return -2 * x + 2
+
+    @np.vectorize
+    def fc_func(x, a):
+        if x <= 0.5:
+            return (-15 * x**1.5 + 3 * x**0.5 + 3 * x**2 - 3 * x)
+        else:
+            return (-1 - 3 * x**0.5 + 2 * x + 5 * x**1.5 - x**2)
+
+    @np.vectorize
+    def fc_func_1(x, a):
+        if x <= 0.5:
+            return x**alpha * (-2 + 3 / (2 * np.sqrt(x)) - 22.5 * x**0.5 + 6 * x)
+        else:
+            return x**alpha * (2 - 3 / (2 * np.sqrt(x)) + 7.5 * x**0.5 - 2 * x)
+
+    return uexact, uexact_prime, fc_func, fc_func_1
 
 # %%
-uexact_expr, uexact_func, fc_expr, fc_func = make_f_and_uexact_5()
-uexact_prime = sp.lambdify((x, a), sp.diff(uexact_expr, x), "numpy")
-fc_expr_1 = x**alpha * sp.diff(fc_expr, x)
-fc_func_1 = sp.lambdify((x, a), fc_expr_1, "numpy")
-#%%
-sp.diff(uexact_expr, x)
+# uexact_expr, uexact, fc_expr, fc_func = make_f_and_uexact_5()
+# uexact_prime = sp.lambdify((x, a), sp.diff(uexact_expr, x), "numpy")
+# fc_expr_1 = x**alpha * sp.diff(fc_expr, x)
+# fc_func_1 = sp.lambdify((x, a), fc_expr_1, "numpy")
+uexact, uexact_prime, fc_func, fc_func_1 = make_f_and_uexact_6()
 
 # %%
 # Integrands
@@ -297,7 +328,7 @@ A1 = solve_system(m1, f1j)
 # %%
 def u_approx(x):
     # x can be scalar or numpy array
-    result = 0.0
+    result = 0
     for idx in range(size):
         result += A0[idx] * phi0Compiled[idx](x)
         result += h * A1[idx] * phi1Compiled[idx](x)
@@ -307,7 +338,7 @@ def u_approx(x):
 # %%
 def u_approx_prime(x):
     # x can be scalar or numpy array
-    result = 0.0
+    result = 0
     for idx in range(size):
         result += A0[idx] * phi0D[idx](x)
         result += h * A1[idx] * phi1D[idx](x)
@@ -316,7 +347,7 @@ def u_approx_prime(x):
 
 # %%
 x_vals = np.linspace(0, 1, 100)
-u_approx_vec = np.vectorize(u_approx, otypes=[np.float64])
+u_approx_vec = np.vectorize(u_approx)
 plt.plot(x_vals, u_approx_vec(x_vals), label="Approximate solution $u_{approx}(x)$")
 u_approx_prime_vec = np.vectorize(u_approx_prime)
 plt.plot(
@@ -326,7 +357,7 @@ plt.plot(
 )
 plt.plot(
     x_vals,
-    uexact_func(x_vals, alpha),
+    uexact(x_vals, alpha),
     label="Exact solution $u_{exact}(x)$",
     linestyle="--",
 )
@@ -355,28 +386,28 @@ plt.show()
 # %%
 plt.plot(
     x_vals,
-    np.abs(u_approx_vec(x_vals) - uexact_func(x_vals, alpha)),
+    np.abs(u_approx_vec(x_vals) - uexact(x_vals, alpha)),
 )
 plt.show()
 
-# %%
-for x in np.linspace(0, 0.9, 10):
-    print(f"[{x:.1f}],", f"[{np.abs(u_approx(x) - uexact_func(x, alpha)):.2e}],")
-# %%
-print(f"({', '.join(f'({v}, {u_approx(v)})' for v in np.linspace(0, 1, 100))})")
-# %%
-print(
-    f"({', '.join(f'({v}, {np.abs(u_approx(v) - uexact_func(v, alpha))})' for v in np.linspace(0, 1, 100))})"
-)
+# # %%
+# for x in np.linspace(0, 0.9, 10):
+#     print(f"{x:.1f}", f"{np.abs(u_approx(x) - uexact(x, alpha)):.2e}")
+# # %%
+# print(f"({', '.join(f'({v}, {u_approx(v)})' for v in np.linspace(0, 1, 100))})")
+# # %%
+# print(
+#     f"({', '.join(f'({v}, {np.abs(u_approx(v) - uexact(v, alpha))})' for v in np.linspace(0, 1, 100))})"
+# )
 
-# %%
-print(
-    f"({', '.join(f'({v}, {u_approx_prime_vec(v)})' for v in np.linspace(0, 1, 100))})"
-)
-# %%
-print(
-    f"({', '.join(f'({v}, {np.abs(u_approx_prime_vec(v) - uexact_prime(v, alpha))})' for v in np.linspace(0, 1, 100))})"
-)
+# # %%
+# print(
+#     f"({', '.join(f'({v}, {u_approx_prime_vec(v)})' for v in np.linspace(0, 1, 100))})"
+# )
+# # %%
+# print(
+#     f"({', '.join(f'({v}, {np.abs(u_approx_prime_vec(v) - uexact_prime(v, alpha))})' for v in np.linspace(0, 1, 100))})"
+# )
 
 # # %%
 # %%
@@ -387,6 +418,10 @@ from scipy.interpolate import CubicSpline
 
 n = int(round(1 / h - 1)) + 1
 x_nodes = np.linspace(0, 1, n + 1)
+u_approx = np.empty(n + 1)
+u_approx[:-1] = np.array(A0)
+u_approx[0] = uexact(0, alpha)  # or your computed u(0)
+u_approx[-1] = uexact(1, alpha)  # = 0 in your problem
 
 
 # --- Method 1: Cubic Hermite Interpolation (slope averaging) ---
@@ -430,17 +465,17 @@ def make_hermite(x_nodes, u_nodes, h):
     return H
 
 
-H_func = make_hermite(x_nodes, u_approx_vec(x_nodes), h)
+H_func = make_hermite(x_nodes, u_approx, h)
 
 # --- Method 2: Natural Cubic Spline (C²) ---
-cs = CubicSpline(x_nodes, u_approx_vec(x_nodes), bc_type="natural")
+cs = CubicSpline(x_nodes, u_approx, bc_type="natural")
 
 # Evaluate on fine grid
-xf = np.linspace(0, 1, 250)
+xf = np.linspace(0, 1, 500)
 uh_H, up_H = H_func(xf)
 uh_CS = cs(xf)
 up_CS = cs(xf, 1)
-ue = uexact_func(xf, alpha)
+ue = uexact(xf, alpha)
 upe = uexact_prime(xf, alpha)
 ua = u_approx_vec(xf)
 upa = u_approx_prime_vec(xf)
@@ -451,7 +486,7 @@ def linear_interp(x_nodes, u_nodes, x_eval):
 
 
 # Precompute slopes (forward difference)
-slopes = np.diff(u_approx_vec(x_nodes)) / h
+slopes = np.diff(u_approx) / h
 
 
 def linear_derivative(x_nodes, slopes, x_eval):
@@ -469,87 +504,100 @@ def linear_derivative(x_nodes, slopes, x_eval):
     return d
 
 
-uh_lin = linear_interp(x_nodes, u_approx_vec(x_nodes), xf)
+uh_lin = linear_interp(x_nodes, u_approx, xf)
 up_lin = linear_derivative(x_nodes, slopes, xf)
 
-#%%
-import matplotlib as mpl
 
-# Set up professional scientific plotting style
-plt.style.use('seaborn-v0_8-whitegrid')
-mpl.rcParams['font.family'] = 'serif'
-mpl.rcParams['font.serif'] = ['Computer Modern Roman']
-mpl.rcParams['text.usetex'] = False
-mpl.rcParams['axes.labelsize'] = 12
-mpl.rcParams['axes.titlesize'] = 14
-mpl.rcParams['xtick.labelsize'] = 10
-mpl.rcParams['ytick.labelsize'] = 10
-mpl.rcParams['legend.fontsize'] = 10
-mpl.rcParams['figure.titlesize'] = 16
-mpl.rcParams['lines.linewidth'] = 1.5
-mpl.rcParams['lines.markersize'] = 4
-mpl.rcParams['savefig.dpi'] = 300
-mpl.rcParams['savefig.bbox'] = 'tight'
-mpl.rcParams['savefig.pad_inches'] = 0.1
+# Plot
+plt.figure(figsize=(12, 6))
 
-# Plot 1: Solution Approximation
-fig1, ax1 = plt.subplots(figsize=(7, 5))
-ax1.plot(xf, ue, label="Exact", color='#1f77b4', linewidth=2)
-ax1.plot(xf, ua, label="Method", color='#ff7f0e', linewidth=1.5)
-ax1.plot(xf, uh_lin, label="Linear $C^0$", color='#2ca02c', linewidth=1.5)
-ax1.plot(xf, uh_H, "--", label="Hermite $C^1$", color='#d62728', linewidth=1.5)
-ax1.plot(xf, uh_CS, "-.", label="Cubic Spline $C^2$", color='#9467bd', linewidth=1.5)
-ax1.plot(x_nodes, u_approx_vec(x_nodes), "ko", markersize=4, label="Nodes")
-ax1.set_title("Solution Approximation")
-ax1.set_xlabel("$x$")
-ax1.set_ylabel("$u(x)$")
-ax1.legend(frameon=True, fancybox=False, edgecolor='black', framealpha=1)
-ax1.grid(True, linestyle='--', alpha=0.7)
-fig1.tight_layout()
-fig1.savefig("solution_approximation.svg", format='svg')
+plt.subplot(1, 2, 1)
+plt.plot(xf, ue, label="Exact")
+plt.plot(xf, ua, label="Method")
+plt.plot(xf, uh_lin, label="Linear C⁰")
+plt.plot(xf, uh_H, "--", label="Hermite C¹")
+plt.plot(xf, uh_CS, "-.", label="Cubic Spline C²")
+plt.plot(x_nodes, u_approx, "ko", markersize=3, label="Nodes")
+plt.title("Solution Approximation")
+plt.xlabel("x")
+plt.ylabel("u(x)")
+plt.legend()
 
-# Plot 2: Derivative Approximation
-fig2, ax2 = plt.subplots(figsize=(7, 5))
-ax2.plot(xf, upe, label="Exact $u'$", color='#1f77b4', linewidth=2)
-ax2.plot(xf, upa, label="Method $u'$", color='#ff7f0e', linewidth=1.5)
-ax2.plot(xf, up_lin, label="Linear $u'$", color='#2ca02c', linewidth=1.5)
-ax2.plot(xf, up_H, "--", label="Hermite $C^1$ $u'$", color='#d62728', linewidth=1.5)
-ax2.plot(xf, up_CS, "-.", label="Cubic Spline $C^2$ $u'$", color='#9467bd', linewidth=1.5)
-ax2.set_title("Derivative Approximation")
-ax2.set_xlabel("$x$")
-ax2.set_ylabel("$u'(x)$")
-ax2.legend(frameon=True, fancybox=False, edgecolor='black', framealpha=1)
-ax2.grid(True, linestyle='--', alpha=0.7)
-fig2.tight_layout()
-fig2.savefig("derivative_approximation.svg", format='svg')
+plt.subplot(1, 2, 2)
+plt.plot(xf, upe, label="Exact $u'$")
+plt.plot(xf, upa, label="Method $u'$")
+plt.plot(xf, up_lin, label="Linear $u'$")
+plt.plot(xf, up_H, "--", label="Hermite C¹ $u'$")
+plt.plot(xf, up_CS, "-.", label="Cubic Spline C² $u'$")
+plt.title("Derivative Approximation")
+plt.xlabel("x")
+plt.ylabel("u'(x)")
+plt.legend()
 
-# Plot 3: Solution Error
-fig3, ax3 = plt.subplots(figsize=(7, 5))
-ax3.semilogy(xf, np.abs(ue - ua), label=f"Method", color='#ff7f0e', linewidth=1.5)
-ax3.semilogy(xf, np.abs(ue - uh_lin), label=f"Linear $C^0$", color='#2ca02c', linewidth=1.5)
-ax3.semilogy(xf, np.abs(ue - uh_H), "--", label=f"Hermite $C^1$", color='#d62728', linewidth=1.5)
-ax3.semilogy(xf, np.abs(ue - uh_CS), "-.", label=f"Cubic Spline $C^2$", color='#9467bd', linewidth=1.5)
-ax3.set_title("Solution Error (log scale)")
-ax3.set_xlabel("$x$")
-ax3.set_ylabel("$|u_{exact}(x) - u_{approx}(x)|$")
-ax3.legend(frameon=True, fancybox=False, edgecolor='black', framealpha=1)
-ax3.grid(True, linestyle='--', alpha=0.7)
-fig3.tight_layout()
-fig3.savefig("solution_error.svg", format='svg')
+plt.tight_layout()
+plt.show()
 
-# Plot 4: Derivative Error
-fig4, ax4 = plt.subplots(figsize=(7, 5))
-ax4.semilogy(xf, np.abs(upe - upa), label=f"Method $u'$", color='#ff7f0e', linewidth=1.5)
-ax4.semilogy(xf, np.abs(up_lin - upe), label=f"Linear $u'$", color='#2ca02c', linewidth=1.5)
-ax4.semilogy(xf, np.abs(up_H - upe), "--", label=f"Hermite $C^1$ $u'$", color='#d62728', linewidth=1.5)
-ax4.semilogy(xf, np.abs(up_CS - upe), "-.", label=f"Cubic Spline $C^2$ $u'$", color='#9467bd', linewidth=1.5)
-ax4.set_title("Derivative Error (log scale)")
-ax4.set_xlabel("$x$")
-ax4.set_ylabel("$|u'_{exact}(x) - u'_{approx}(x)|$")
-ax4.legend(frameon=True, fancybox=False, edgecolor='black', framealpha=1)
-ax4.grid(True, linestyle='--', alpha=0.7)
-fig4.tight_layout()
-fig4.savefig("derivative_error.svg", format='svg')
+
+# %%
+def rmse(errs):
+    return np.sum(errs**2) ** 0.5
+
+
+# %%
+# Plot
+plt.figure(figsize=(12, 6))
+
+plt.subplot(1, 2, 1)
+plt.plot(xf, np.abs(ue - ua), label=f"Method, RMSE={rmse(np.abs(ue - ua)):0.4f}")
+plt.plot(
+    xf, np.abs(ue - uh_lin), label=f"Linear C⁰, RMSE={rmse(np.abs(ue - uh_lin)):0.4f}"
+)
+plt.plot(
+    xf,
+    np.abs(ue - uh_H),
+    "--",
+    label=f"Hermite C¹, RMSE={rmse(np.abs(ue - uh_H)):0.4f}",
+)
+plt.plot(
+    xf,
+    np.abs(ue - uh_CS),
+    "-.",
+    label=f"Cubic Spline C², RMSE={rmse(np.abs(ue - uh_CS)):0.4f}",
+)
+plt.title("Solution Approximation")
+plt.xlabel("x")
+plt.ylabel("u(x)")
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(
+    xf, np.abs(upe - upa), label=f"Method $u'$, RMSE={rmse(np.abs(upe - upa)):0.4f}"
+)
+plt.plot(
+    xf,
+    np.abs(up_lin - upe),
+    label=f"Linear $u'$, RMSE={rmse(np.abs(up_lin - upe)):0.4f}",
+)
+plt.plot(
+    xf,
+    np.abs(up_H - upe),
+    "--",
+    label=f"Hermite C¹ $u'$, RMSE={rmse(np.abs(up_H - upe)):0.4f}",
+)
+plt.plot(
+    xf,
+    np.abs(up_CS - upe),
+    "-.",
+    label=f"Cubic Spline C² $u'$, RMSE={rmse(np.abs(up_CS - upe)):0.4f}",
+)
+plt.title("Derivative Approximation")
+plt.xlabel("x")
+plt.ylabel("u'(x)")
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+
 
 # %%
 vals = [
@@ -594,47 +642,5 @@ for valls in vals:
     for label, err in tmps:
         print(f"{label}: {err:0.4f}")
     print("------")
-
-
-# %%
-def maxerr(errs):
-    return np.max(np.abs(errs))
-
-
-# %%
-print("------")
-for valls in vals:
-    tmps = []
-    for errs, label in valls:
-        tmps.append((label, maxerr(errs)))
-    tmps.sort(key=lambda x: x[1])
-    for label, err in tmps:
-        print(f"{label}: {err:0.4f}")
-    print("------")
-
-# %%
-def print_typst_data(xs, ys, label):
-    label = label.replace(" ", "_").lower()
-    print(f"#let {label} = ({', '.join(f'({x}, {y})' for x, y in zip(xs, ys))})")
-
-#%%
-print_typst_data(x_nodes, u_approx_vec(x_nodes), "Nodes")
-print_typst_data(xf, ue, label="Exact")
-print_typst_data(xf, ua, label="Method")
-print_typst_data(xf, uh_lin, label="Linear")
-print_typst_data(xf, uh_H, label="Hermite")
-print_typst_data(xf, uh_CS,  label="Cubic Spline")
-
-# %%
-print_typst_data(xf, np.abs(ue - ua), label="Method_abs_err")
-print_typst_data(xf, np.abs(ue - uh_lin), label="Linear_abs_err")
-print_typst_data(xf, np.abs(ue - uh_H), label="Hermite_abs_err")
-print_typst_data(xf, np.abs(ue - uh_CS),  label="Cubic Spline_abs_err")
-
-# %%
-print_typst_data(xf, np.abs(upe - upa), label="Method_prime_abs_err")
-print_typst_data(xf, np.abs(upe - up_lin), label="Linear_prime_abs_err")
-print_typst_data(xf, np.abs(upe - up_H), label="Hermite_prime_abs_err")
-print_typst_data(xf, np.abs(upe - up_CS),  label="Cubic Spline_prime_abs_err")
 
 # %%
